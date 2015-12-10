@@ -11,6 +11,14 @@ var DeployPluginBase = require('ember-cli-deploy-plugin');
 var MAX_PORT_NUMBER = 65535;
 var MIN_PORT_NUMBER = 49151;
 
+function fileExists(filePath) {
+  try {
+    return fs.statSync(filePath).isFile();
+  } catch (err) {
+    return false;
+  }
+}
+
 module.exports = {
   name: 'ember-cli-deploy-ssh-tunnel',
 
@@ -52,11 +60,20 @@ module.exports = {
         var password = this.readConfig('password');
         var privateKey = this.readConfig('privateKeyPath');
         var tunnel = this.readConfig('tunnelClient');
+        var agent = this.readConfig('agent') || process.env.SSH_AUTH_SOCK;
+        var idRsaPath = untildify('~/.ssh/id_rsa');
+        var idDsaPath = untildify('~/.ssh/id_dsa');
 
         if (password) {
           sshConfig.password = password;
         } else if (privateKey) {
           sshConfig.privateKey = fs.readFileSync(untildify(privateKey));
+        } else if (agent) {
+          sshConfig.agent = agent;
+        } else if (fileExists(idRsaPath)) {
+          sshConfig.privateKey = fs.readFileSync(idRsaPath);
+        } else if (fileExists(idDsaPath)) {
+          sshConfig.privateKey = fs.readFileSync(idDsaPath);
         }
 
         return new Promise(function(resolve, reject) {
